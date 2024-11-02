@@ -5,20 +5,25 @@ import { isDefined } from "./helpers.js";
  * @typedef {(k: V) => R} Fn
  */
 
-// eldrich horror for a type :^
+/**
+ * @template T
+ * @typedef {Object} Events<T>
+ * @type {T extends Array ? never : T extends Object ? {
+ *      [K in keyof T as `${K & string}`]: T[K] } & {
+ *      [K in keyof T as `${K & string}$on`]: (condition: Fn<T[K], boolean>, func: Fn<T[K], void>, options?: { once?: boolean }) => Fn<T[K], void> } & {
+ *      [K in keyof T as `${K & string}$onChange`]: Fn<Fn<T[K], void>, void> } & {
+ *      [K in keyof T as `${K & string}$subscription`]: () => (condition: Fn<T[K], boolean>, func: Fn<T[K], void>, options?: { once?: boolean }) => Fn<T[K], void>
+ * } : K in T}
+ */
+
 /**
  * @template T
  * @param {T} obj
- * @returns {T extends Object ? T & {
- *  [K in keyof T as `${K & string}$on`]: (condition: Fn<T[K], boolean>, func: Fn<T[K], void>, options?: { once?: boolean }) => Fn<T[K], void>
- * } & {
- *  [K in keyof T as `${K & string}$onChange`]: Fn<Fn<T[K], void>, void>
- * } : { [K in keyof T as `${K & string}$on`]: T[K] }}
+ * @returns {Events<T>}
  */
 export function events(obj) {
     let result = {};
-    const arr_len = Array.isArray(obj) ? obj.length : false;
-
+    
     function formCondition(condition) {
         if (!isDefined(condition)) throw new Error("Invalid condition");
         switch (typeof condition) {
@@ -80,10 +85,15 @@ export function events(obj) {
         });
     }
 
-    if (arr_len) {
-        Object.setPrototypeOf(result, Array.prototype);
-        result.length = arr_len;
-    }
-
     return result;
 }
+
+let foo = events({
+    begin: false,
+    index: false,
+    doctype: false,
+    configyml: false,
+    infshop: false,
+});
+
+let bar = events(0);

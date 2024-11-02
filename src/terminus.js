@@ -2,6 +2,7 @@ import { events } from "./lib/events.js";
 import { Terminal } from "./lib/terminal.js";
 import { sleep, spawn } from "./lib/helpers.js";
 import { Achievement } from "./lib/achievements.js";
+import { Shop } from "./shop.js";
 // import "./logi/skills.js"; // this is heavily broken rn, TODO: change this to use class (like achievements)
 
 // 0.1.0
@@ -22,15 +23,15 @@ function greetMessage() {
 // Wow, fancy! :)
 spawn(async () => {
     await sleep(1000);
+    terminal.run("shop");
+    await sleep(1000);
     terminal.log(greetMessage());
     await sleep(2000);
     terminal.log("You can type 'help' to see available commands");
-    await sleep(2000);
 });
 
 //The object for determining how many points you make from any given update.
-
-let game = events({
+const game = events({
     terminal: new Terminal(document.body.querySelector("#terminal")),
     gameverison: "0.1.0",
     unlocks: events({
@@ -51,6 +52,38 @@ let game = events({
         cantaffordskill: "You need more skill points.",
         needparentskill: "Unlock the previous skill first.",
     }),
+    shop: new Shop().withItems({
+        begin: {
+            description: "The beginning!",
+            price: 5,
+            stock: 1,
+            visibility: () => !game.unlocks.begin,
+        },
+        index: {
+            description: "index.html",
+            price: 20,
+            stock: 1,
+            visibility: () => !game.unlocks.index,
+        },
+        doctype: {
+            description: "<!DOCTYPE HTML>",
+            price: 50,
+            stock: 1,
+            visibility: () => !game.unlocks.doctype,
+        },
+        configyml: {
+            description: "config.yml",
+            price: 100,
+            stock: 1,
+            visibility: () => !game.unlocks.configyml,
+        },
+        push: {
+            description: "First big unlock.",
+            stock: 3,
+            price: () => [500, 5000, 50000][game.upgstage],
+        },
+    }),
+    infshop: new Shop().withItems([]),
     skillpoints: 0,
     xp: 0,
     incombat: false,
@@ -88,9 +121,15 @@ let game = events({
         }
     },
 });
-const dangerlevel = randomnumbah(game.enemies.difficulty, game.enemies.difficulty * 10)
 /** @type {Terminal} */
 const terminal = game.terminal;
+game.shop.init(game);
+game.infshop.init(game);
+
+const dangerlevel = randomnumbah(
+    game.enemies.difficulty,
+    game.enemies.difficulty * 10,
+);
 
 terminal.addCommand(function hints(force = -1) {
     const list = [
@@ -99,7 +138,7 @@ terminal.addCommand(function hints(force = -1) {
         "help can update its contents based on the things you have purchased.",
         "You can change your difficulty by calling difficultyset(number)", //BROKEN
         "You can get more hints by calling hints.",
-        "Run 'fullscreen' to be able to, well, play in fullscreen. Call again to exit."
+        "Run 'fullscreen' to be able to, well, play in fullscreen. Call again to exit.",
         //TODO: Re add clear() to new terminal.
     ];
     if (force >= 0) return terminal.log(list[force]);
@@ -130,12 +169,11 @@ terminal.addCommand(function discord() {
 });
 terminal.addCommand(function fullscreen() {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+        document.documentElement.requestFullscreen();
     } else if (document.exitFullscreen) {
-      document.exitFullscreen();
+        document.exitFullscreen();
     }
-  }
-  );
+});
 const DEBUG_MODE = false;
 if (DEBUG_MODE) {
     const debug = [
@@ -152,8 +190,8 @@ if (DEBUG_MODE) {
             game.unlocks.infshop = bool;
         }),
         terminal.addCommand(function dumpgame() {
-            terminal.log(game)
-            console.log(game)
+            terminal.log(game);
+            console.log(game);
         }),
     ];
 }
@@ -173,7 +211,6 @@ game.indebted$on(true, () => {
 game.indebted$on(false, () => {
     terminal.log("You got out of debt.");
 });
-
 
 terminal.addCommand(function run() {
     if (game.enemies.incombat === false) {
@@ -336,19 +373,20 @@ terminal.addCommand(function update() {
 });
 
 terminal.addCommand(function shop() {
-    terminal.log(...[
-        "begin: $5.........The beginning",
-        "index: $20........index.html",
-        "doctype: $50......<!DOCTYPE HTML>",
-        "configyml: $100...config.yml",
-        game.upgstage === 0
-            ? "push: $500........git push 1"
-            : game.upgstage === 1
-            ? "push: $5000.......git push 2"
-            : game.upgstage === 2
-            ? "push: $50000......git push 3"
-            : "push: $???........git push ?",
-    ]);
+    terminal.log(game.shop.toString());
+    // terminal.log(...[
+    //     "begin: $5.........The beginning",
+    //     "index: $20........index.html",
+    //     "doctype: $50......<!DOCTYPE HTML>",
+    //     "configyml: $100...config.yml",
+    //     game.upgstage === 0
+    //         ? "push: $500........git push 1"
+    //         : game.upgstage === 1
+    //         ? "push: $5000.......git push 2"
+    //         : game.upgstage === 2
+    //         ? "push: $50000......git push 3"
+    //         : "push: $???........git push ?",
+    // ]);
 });
 
 game.unlocks.begin$on(true, () => {
@@ -356,54 +394,54 @@ game.unlocks.begin$on(true, () => {
     game.points -= 5 * game.difficulty;
     terminal.log("Began!");
 });
-terminal.addCommand(function begin() {
-    if (game.indebted) return terminal.log("Cannot afford!");
-    game.unlocks.begin = true;
-    terminal.changeCommand(function begin() {
-        terminal.log("You already began.");
-    });
-});
+// terminal.addCommand(function begin() {
+//     if (game.indebted) return terminal.log("Cannot afford!");
+//     game.unlocks.begin = true;
+//     terminal.changeCommand(function begin() {
+//         terminal.log("You already began.");
+//     });
+// });
 
 game.unlocks.index$on(true, () => {
     game.steptwomult += 0.5;
     game.points -= 20 * game.difficulty;
     terminal.log("Created index.html!");
 });
-terminal.addCommand(function index() {
-    if (game.indebted) return terminal.log("Cannot afford!");
-    game.unlocks.index = true;
-    terminal.changeCommand(function index() {
-        terminal.log("You already created index.html");
-    });
-});
+// terminal.addCommand(function index() {
+//     if (game.indebted) return terminal.log("Cannot afford!");
+//     game.unlocks.index = true;
+//     terminal.changeCommand(function index() {
+//         terminal.log("You already created index.html");
+//     });
+// });
 
 game.unlocks.doctype$on(true, () => {
     game.stepthreemult += 0.5;
     game.points -= 50 * game.difficulty;
     terminal.log("Added <!DOCTYPE HTML>!\n");
 });
-terminal.addCommand(function doctype() {
-    if (game.indebted) return terminal.log("Cannot afford!");
-    game.unlocks.doctype = true;
-    terminal.changeCommand(function doctype() {
-        terminal.log(
-            "You- YOU ALREADY ADDED <!DOCTYPE HTML> YOU DONT NEED TO PUT IT EVERY TIME YOU ADD <BODY> STOP PLEASE",
-        );
-    });
-});
+// terminal.addCommand(function doctype() {
+//     if (game.indebted) return terminal.log("Cannot afford!");
+//     game.unlocks.doctype = true;
+//     terminal.changeCommand(function doctype() {
+//         terminal.log(
+//             "You- YOU ALREADY ADDED <!DOCTYPE HTML> YOU DONT NEED TO PUT IT EVERY TIME YOU ADD <BODY> STOP PLEASE",
+//         );
+//     });
+// });
 
 game.unlocks.configyml$on(true, () => {
     game.stepfourmult *= 2;
     game.points -= 100 * game.difficulty;
     terminal.log("Created config.yml!");
 });
-terminal.addCommand(function configyml() {
-    if (game.indebted) return terminal.log("Cannot afford!");
-    game.unlocks.configyml = true;
-    terminal.changeCommand(function configyml() {
-        terminal.log("You already created config.yml");
-    });
-});
+// terminal.addCommand(function configyml() {
+//     if (game.indebted) return terminal.log("Cannot afford!");
+//     game.unlocks.configyml = true;
+//     terminal.changeCommand(function configyml() {
+//         terminal.log("You already created config.yml");
+//     });
+// });
 
 game.upgstage$on(1, () =>
     terminal.changeCommand(function push() {
@@ -424,15 +462,15 @@ game.upgstage$on(3, () =>
     terminal.changeCommand(function push3() {
         terminal.log("Please don't try this again, it's not funny");
     }));
-terminal.addCommand(function push() {
-    if (game.indebted) {
-        return terminal.log("you are brokies :3");
-    }
+// terminal.addCommand(function push() {
+//     if (game.indebted) {
+//         return terminal.log("you are brokies :3");
+//     }
 
-    game.unlocks.infshop = true;
-    game.upgstage = 1;
-    game.points -= 500 * game.difficulty;
-});
+//     game.unlocks.infshop = true;
+//     game.upgstage = 1;
+//     game.points -= 500 * game.difficulty;
+// });
 
 game.unlocks.infshop$on(true, () => {
     terminal.log("You've unlocked the infshop. Check 'help' for details.");
@@ -481,7 +519,6 @@ game.unlocks.infshop$on(true, () => {
             }\nIncreases how much upgrades upgrade stuff OTHER THAN ITSELF.`,
             `helloworld: $0\nPrints 'Hello world!' in terminal.`,
         ];
-
 
         terminal.log(...list);
     });

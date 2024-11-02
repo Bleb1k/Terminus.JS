@@ -17,3 +17,13 @@ export function spawn(asyncfunc) {
             : res(asyncfunc())
     );
 }
+
+export function namedFunction(name, func) {
+    Object.defineProperty(func, "name", {
+        configurable: false,
+        writable: false,
+        enumerable: false,
+        value: name,
+    });
+    return func;
+}

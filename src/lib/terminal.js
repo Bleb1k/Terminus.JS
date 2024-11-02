@@ -57,7 +57,7 @@ export class Terminal {
                     }
                     this.#historyIndex = this.#history.length;
                     this.#inputElement.value = "";
-                    this.#run(command);
+                    this.run(command);
                     return;
             }
 
@@ -70,6 +70,7 @@ export class Terminal {
         });
     }
 
+    /** @param {() => void} func */
     addCommand(func) {
         const name = func.name;
         if (!name) throw new Error("Command function must have a name.");
@@ -95,7 +96,7 @@ export class Terminal {
         delete this.#commands[name];
     }
 
-    #run(command) {
+    run(command) {
         if (!this.#commands[command]) {
             this.error(`Command ${command} does not exist.`);
             return;
