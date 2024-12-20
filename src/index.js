@@ -20,7 +20,6 @@ function hints(force = -1) {
   terminal.log(list[Math.floor(Math.random() * list.length)]);
 }; */
 
-
 /// forbidden
 // terminal.useCommand(function test(game) {
 //   game.terminal.toBytes()
